@@ -282,7 +282,7 @@ void triangular_matrix_vector_solve(
   std::experimental::mdspan<ElementType_B, std::experimental::extents<SizeType_B, ext_B>, Layout_B, Accessor_B> b,
   std::experimental::mdspan<ElementType_X, std::experimental::extents<SizeType_X, ext_X>, Layout_X, Accessor_X> x)
 {
-  auto divide = [](const auto& x, const auto& y) { return x / y; };
+  auto divide = [](const auto& xi, const auto& yi) { return xi / yi; };
   triangular_matrix_vector_solve(std::forward<std::experimental::linalg::impl::inline_exec_t>(exec), A, t, d, b, x, divide);
 }
 
