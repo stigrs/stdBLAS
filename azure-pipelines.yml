@@ -52,4 +52,4 @@ stages:
   - template: ./pipelines/jobs-macos.yml
     parameters:
       jobName: 'Validate Apple-Clang latest'
-      imageName: macOS-12
+      imageName: macos-latest
