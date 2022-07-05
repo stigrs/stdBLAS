@@ -1,4 +1,8 @@
 
+if (NOT TARGET std::mdspan)
+  find_package(mdspan)
+endif()
+
 macro(linalg_add_test_kokkos TESTNAME FINDSTR)
 
   # the macro might have extra args
@@ -48,7 +52,7 @@ endmacro()
 # output from the impl itself so just add basic test
 set(testExe mdspan_to_view)
 add_executable(${testExe} mdspan_to_view.cpp gtest_main_kokkos.cpp)
-target_link_libraries(${testExe} linalg GTest::GTest)
+target_link_libraries(${testExe} linalg std::mdspan GTest::GTest)
 add_test(NAME utest_${testExe} COMMAND ${testExe})
 set_tests_properties(utest_${testExe} PROPERTIES FAIL_REGULAR_EXPRESSION "[^a-z]Error;ERROR;Failed;FAILED")
 

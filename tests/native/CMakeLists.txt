@@ -1,13 +1,17 @@
 
+if (NOT TARGET std::mdspan)
+  find_package(mdspan)
+endif()
+
 macro(linalg_add_test name)
   add_executable(${name} ${name}.cpp)
   if(BLAS_FOUND)
-    target_link_libraries(${name} linalg GTest::GTest GTest::Main ${BLAS_LIBRARIES})
+    target_link_libraries(${name} linalg std::mdspan GTest::GTest GTest::Main ${BLAS_LIBRARIES})
   else()
     # BLAS_LIBRARIES is literally "FALSE" if the BLAS was not found.
     # Linking against that causes linker errors involving "FALSE.lib".
     # Thus, we exclude BLAS_LIBRARIES completely if the BLAS was not found.
-    target_link_libraries(${name} linalg GTest::GTest GTest::Main)
+    target_link_libraries(${name} linalg std::mdspan GTest::GTest GTest::Main)
   endif()
   add_test(${name} ${name})
 endmacro()
