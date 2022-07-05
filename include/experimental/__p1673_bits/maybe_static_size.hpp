@@ -54,7 +54,7 @@ template <class T, T Value, T DynSentinel>
 struct __maybe_static_value {
 
   MDSPAN_INLINE_FUNCTION constexpr
-  __maybe_static_value(T val) noexcept { }
+  __maybe_static_value(T) noexcept { }
   MDSPAN_INLINE_FUNCTION _MDSPAN_CONSTEXPR_14
   __maybe_static_value& operator=(T) noexcept { }
 
