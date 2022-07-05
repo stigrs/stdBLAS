@@ -1,0 +1,8 @@
+# Files:
+*~
+*.swp
+
+# Directories:
+build
+.vs
+.vscode

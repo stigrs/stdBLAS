@@ -7,12 +7,21 @@ project(LinAlg
 
 ################################################################################
 
+include(GNUInstallDirs)
+
+################################################################################
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 ################################################################################
 
-option(LINALG_ENABLE_TESTS "Enable tests." Off)
-option(LINALG_ENABLE_EXAMPLES "Build examples." Off)
+set(LINALG_STANDALONE_PROJECT OFF)
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    set(LINALG_STANDALONE_PROJECT ON)
+endif()
+
+option(LINALG_ENABLE_TESTS "Enable tests." ${LINALG_STANDALONE_PROJECT})
+option(LINALG_ENABLE_EXAMPLES "Build examples." ${LINALG_STANDALONE_PROJECT})
 #option(LINALG_ENABLE_BENCHMARKS "Enable benchmarks." Off)
 #option(LINALG_ENABLE_COMP_BENCH "Enable compilation benchmarks." Off)
 
@@ -159,37 +168,41 @@ target_include_directories(linalg INTERFACE
 
 ################################################################################
 
-install(TARGETS linalg EXPORT linalgTargets
-  INCLUDES DESTINATION include
+target_include_directories(linalg INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+install(TARGETS linalg 
+    EXPORT linalgTargets
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}    
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/experimental DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/experimental DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(EXPORT linalgTargets
     FILE linalgTargets.cmake
     NAMESPACE std::
-    DESTINATION cmake
-)
-
-export(TARGETS linalg
-    NAMESPACE std::
-    FILE linalgTargets.cmake
-)
-
-install(DIRECTORY include/experimental DESTINATION include)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/experimental/__p1673_bits/linalg_config.h
-    DESTINATION include/experimental/__p1673_bits
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/linalg
 )
 
 include(CMakePackageConfigHelpers)
-configure_package_config_file(cmake/LinAlgConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfig.cmake
-  INSTALL_DESTINATION cmake
-)
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfigVersion.cmake
-  COMPATIBILITY SameMajorVersion
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfigVersion.cmake"
+    COMPATIBILITY SameMajorVersion
 )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfigVersion.cmake
-    DESTINATION cmake
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/LinAlgConfig.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/linalg
+)
+install(FILES 
+    "${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfig.cmake" 
+    "${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/linalg
 )
 
 ################################################################################
