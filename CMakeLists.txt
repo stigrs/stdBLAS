@@ -151,8 +151,6 @@ message(STATUS "Build include directory: ${CMAKE_CURRENT_BINARY_DIR}/include/exp
 add_library(linalg INTERFACE)
 add_library(std::linalg ALIAS linalg)
 
-target_link_libraries(linalg INTERFACE std::mdspan)
-
 if(LINALG_ENABLE_KOKKOS)
   target_link_libraries(linalg INTERFACE Kokkos::kokkos)
   target_link_libraries(linalg INTERFACE Kokkos::kokkoskernels)
@@ -160,13 +158,6 @@ if(LINALG_ENABLE_KOKKOS)
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tpl-implementations/include>
   )
 endif()
-
-target_include_directories(linalg INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-)
-
-################################################################################
 
 target_include_directories(linalg INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
