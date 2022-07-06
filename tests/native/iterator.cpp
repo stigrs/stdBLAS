@@ -9,6 +9,9 @@
 #include <typeinfo>
 #include <vector>
 
+// Currently, this code does not compile with AppleClang 13 on macOS 11
+#ifndef __APPLE__
+
 namespace {
   using std::experimental::full_extent;
   using std::experimental::dynamic_extent;
@@ -435,3 +438,5 @@ namespace {
   //   vector_t x(storage.data(), vectorSize);
   // }
 }
+
+#endif // __APPLE__
