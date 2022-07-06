@@ -1,5 +1,5 @@
 #include <experimental/linalg>
-
+#include <vector>
 #include <iostream>
 
 #if (! defined(__GNUC__)) || (__GNUC__ > 9)
