@@ -1,4 +1,5 @@
 # P1673 reference implementation
+[![Build Status](https://dev.azure.com/stigrs0020/stigrs/_apis/build/status/stigrs.stdBLAS?branchName=main)](https://dev.azure.com/stigrs0020/stigrs/_build/latest?definitionId=13&branchName=main)
 
 This is a reference implementation of P1673,
 "A free function linear algebra interface based on the BLAS."
