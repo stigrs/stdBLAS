@@ -49,6 +49,7 @@ namespace std {
 namespace experimental {
 inline namespace __p1673_version_0 {
 namespace linalg {
+namespace detail {
 
 template <class T, T Value, T DynSentinel>
 struct __maybe_static_value {
@@ -86,6 +87,7 @@ struct __maybe_static_value<T, DynSentinel, DynSentinel> {
 template <::std::size_t StaticSize, ::std::size_t Sentinel=dynamic_extent>
 using __maybe_static_extent = __maybe_static_value<::std::size_t, StaticSize, Sentinel>;
 
+} // end namespace detail
 } // end namespace linalg
 } // end inline namespace __p1673_version_0
 } // end namespace experimental
