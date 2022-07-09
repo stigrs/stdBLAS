@@ -724,10 +724,10 @@ void matrix_product(
   {
     using size_type = ::std::common_type_t<SizeType_A, SizeType_B, SizeType_C>;
 
-    for (size_type i = 0; i < C.extent(0); ++i) {
-      for (size_type j = 0; j < C.extent(1); ++j) {
+    for (size_type i = 0; i < static_cast<size_type>(C.extent(0)); ++i) {
+      for (size_type j = 0; j < static_cast<size_type>(C.extent(1)); ++j) {
         C(i,j) = ElementType_C{};
-        for (size_type k = 0; k < A.extent(1); ++k) {
+        for (size_type k = 0; k < static_cast<size_type>(A.extent(1)); ++k) {
           C(i,j) += A(i,k) * B(k,j);
         }
       }
