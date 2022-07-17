@@ -47,12 +47,8 @@ jobs:
       run: ctest -C ${{env.BUILD_TYPE}}
       
   build-windows:
-    runs-on: ${{matrix.os}}
+    runs-on: windows-latest
 
-    strategy:
-      matrix:
-        os: [windows-2022, windows-2019]
-        
     steps:
     - uses: actions/checkout@v3
 
