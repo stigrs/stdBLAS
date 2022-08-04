@@ -40,57 +40,33 @@
 //@HEADER
 */
 
-#ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_CONJUGATE_IF_NEEDED_HPP_
-#define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_CONJUGATE_IF_NEEDED_HPP_
+#ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_MACROS_HPP_
+#define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_MACROS_HPP_
 
-#include <complex>
-#include <type_traits>
+#define P1673_MATRIX_EXTENTS_TEMPLATE_PARAMETERS( MATRIX_NAME ) \
+  class SizeType_ ## MATRIX_NAME , \
+  ::std::size_t numRows_ ## MATRIX_NAME , \
+  ::std::size_t numCols_ ## MATRIX_NAME
 
-namespace std {
-namespace experimental {
-inline namespace __p1673_version_0 {
-namespace linalg {
-namespace impl {
+#define P1673_MATRIX_TEMPLATE_PARAMETERS( MATRIX_NAME ) \
+    class ElementType_ ## MATRIX_NAME , \
+    P1673_MATRIX_EXTENTS_TEMPLATE_PARAMETERS( MATRIX_NAME ) , \
+    class Layout_ ## MATRIX_NAME , \
+    class Accessor_ ## MATRIX_NAME
 
-template <class T> struct is_complex : std::false_type {};
+#define P1673_MATRIX_EXTENTS_PARAMETER( MATRIX_NAME ) \
+  ::std::experimental::extents< \
+    SizeType_ ## MATRIX_NAME , \
+    numRows_ ## MATRIX_NAME , \
+    numCols_ ## MATRIX_NAME \
+  >
 
-template <> struct is_complex<std::complex<float>> : std::true_type {};
-template <> struct is_complex<std::complex<double>> : std::true_type {};
-template <> struct is_complex<std::complex<long double>> : std::true_type {};
+#define P1673_MATRIX_PARAMETER( MATRIX_NAME ) \
+  ::std::experimental::mdspan< \
+    ElementType_ ## MATRIX_NAME , \
+    P1673_MATRIX_EXTENTS_PARAMETER( MATRIX_NAME ), \
+    Layout_ ## MATRIX_NAME , \
+    Accessor_ ## MATRIX_NAME \
+  > MATRIX_NAME
 
-template <class T> inline constexpr bool is_complex_v = is_complex<T>::value;
-
-template <class T, class = void> struct has_conj : std::false_type {};
-
-// If I can find unqualified conj via overload resolution,
-// then assume that conj(t) returns the conjugate of t.
-template <class T>
-struct has_conj<T, decltype(conj(std::declval<T>()), void())> : std::true_type {
-};
-
-template <class T> T conj_if_needed_impl(const T &t, std::false_type) {
-  return t;
-}
-
-template <class T> auto conj_if_needed_impl(const T &t, std::true_type) {
-  if constexpr (std::is_arithmetic_v<T>) {
-    return t;
-  } else {
-    return conj(t);
-  }
-}
-
-// Inline static variables require C++17.
-constexpr inline auto conj_if_needed = [](const auto& t)
-{
-  using T = std::remove_const_t<decltype(t)>;
-  return conj_if_needed_impl(t, has_conj<T>{});
-};
-
-} // end namespace impl
-} // end namespace linalg
-} // namespace __p1673_version_0
-} // end namespace experimental
-} // end namespace std
-
-#endif // LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_CONJUGATE_TRANSPOSED_HPP_
+#endif //LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_MACROS_HPP_
