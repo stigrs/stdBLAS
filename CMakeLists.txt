@@ -185,7 +185,7 @@ target_include_directories(linalg INTERFACE
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-install(TARGETS linalg 
+install(TARGETS linalg mdspan
     EXPORT linalgTargets
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}    
 )
