@@ -1,3 +1,20 @@
+//@HEADER
+// ************************************************************************
+//
+//                        Kokkos v. 4.0
+//       Copyright (2022) National Technology & Engineering
+//               Solutions of Sandia, LLC (NTESS).
+//
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
+//
+// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
+// See https://kokkos.org/LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+// ************************************************************************
+//@HEADER
+
 #include <experimental/linalg>
 #include <iostream>
 
@@ -11,10 +28,10 @@ void run_trivial_example()
   using extents_type = stdexp::extents<stdexp::dynamic_extent>;
   stdexp::mdspan<value_type, extents_type> a(arr.data(),0);
 
-  const auto idx = stdla::idx_abs_max(std::execution::seq, a);
+  const auto idx = stdla::vector_idx_abs_max(std::execution::seq, a);
   std::cout << "Sequen result = " << idx << '\n';
 
-  const auto idx_kk = stdla::idx_abs_max(KokkosKernelsSTD::kokkos_exec<>(), a);
+  const auto idx_kk = stdla::vector_idx_abs_max(KokkosKernelsSTD::kokkos_exec<>(), a);
   std::cout << "Kokkos result = " << idx_kk << '\n';
 }
 
@@ -39,17 +56,17 @@ void run_nontrivial_example()
   a(9) = -0.9;
 
   // This goes to the base implementation
-  const auto idx = stdla::idx_abs_max(std::execution::seq, a);
+  const auto idx = stdla::vector_idx_abs_max(std::execution::seq, a);
   std::cout << "Sequen result = " << idx << '\n';
 
   // This forwards to KokkosKernels (https://github.com/kokkos/kokkos-kernels
-  const auto idx_kk = stdla::idx_abs_max(KokkosKernelsSTD::kokkos_exec<>(), a);
+  const auto idx_kk = stdla::vector_idx_abs_max(KokkosKernelsSTD::kokkos_exec<>(), a);
   std::cout << "Kokkos result = " << idx_kk << '\n';
 }
 
 int main(int argc, char* argv[])
 {
-  std::cout << "idx_abs_max example: calling kokkos-kernels" << std::endl;
+  std::cout << "vector_idx_abs_max example: calling kokkos-kernels" << std::endl;
 
   Kokkos::initialize(argc,argv);
   {

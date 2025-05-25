@@ -1,50 +1,25 @@
-/*
 //@HEADER
 // ************************************************************************
 //
-//                        Kokkos v. 2.0
-//              Copyright (2019) Sandia Corporation
+//                        Kokkos v. 4.0
+//       Copyright (2022) National Technology & Engineering
+//               Solutions of Sandia, LLC (NTESS).
 //
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-// the U.S. Government retains certain rights in this software. //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
 //
-// 1. Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the Corporation nor the names of the
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Questions? Contact Christian R. Trott (crtrott@sandia.gov)
+// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
+// See https://kokkos.org/LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // ************************************************************************
 //@HEADER
-*/
 
 #ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_BLAS1_VECTOR_IDX_ABS_MAX_HPP_
 #define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_BLAS1_VECTOR_IDX_ABS_MAX_HPP_
 
-namespace std {
-namespace experimental {
+namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
+namespace MDSPAN_IMPL_PROPOSED_NAMESPACE {
 inline namespace __p1673_version_0 {
 namespace linalg {
 
@@ -52,18 +27,18 @@ namespace linalg {
 namespace {
 
 template <class Exec, class v_t, class = void>
-struct is_custom_idx_abs_max_avail : std::false_type {};
+struct is_custom_vector_idx_abs_max_avail : std::false_type {};
 
 template <class Exec, class v_t>
-struct is_custom_idx_abs_max_avail<
+struct is_custom_vector_idx_abs_max_avail<
   Exec, v_t,
   std::enable_if_t<
     //FRizzi: maybe should use is_convertible?
     std::is_same<
-      decltype(idx_abs_max(std::declval<Exec>(), std::declval<v_t>())),
+      decltype(vector_idx_abs_max(std::declval<Exec>(), std::declval<v_t>())),
       typename v_t::extents_type::size_type
       >::value
-    && !linalg::impl::is_inline_exec_v<Exec>
+    && ! impl::is_inline_exec_v<Exec>
     >
   >
   : std::true_type{};
@@ -72,25 +47,48 @@ template<class ElementType,
          class SizeType, ::std::size_t ext0,
          class Layout,
          class Accessor>
-SizeType idx_abs_max_default_impl(
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> v)
+SizeType vector_idx_abs_max_default_impl(
+  mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> v)
 {
   using std::abs;
-  using magnitude_type = decltype(abs(v(0)));
+  using value_type = typename decltype(v)::value_type;
+  using magnitude_type =
+    decltype(impl::abs_if_needed(impl::real_if_needed(std::declval<value_type>())) +
+             impl::abs_if_needed(impl::imag_if_needed(std::declval<value_type>())));
 
   if (v.extent(0) == 0) {
     return std::numeric_limits<SizeType>::max();
   }
 
-  SizeType maxInd = 0;
-  magnitude_type maxVal = abs(v(0));
-  for (SizeType i = 1; i < v.extent(0); ++i) {
-    if (maxVal < abs(v(i))) {
-      maxVal = abs(v(i));
-      maxInd = i;
+  if constexpr (std::is_arithmetic_v<value_type>) {
+    SizeType maxInd = 0;
+    magnitude_type maxVal = abs(v(0));
+    for (SizeType i = 1; i < v.extent(0); ++i) {
+      if (maxVal < abs(v(i))) {
+        maxVal = abs(v(i));
+        maxInd = i;
+      }
     }
+
+    return maxInd;
   }
-  return maxInd; // FIXME check for NaN "never less than" stuff
+  else {
+    SizeType maxInd = 0;
+    magnitude_type maxVal = impl::abs_if_needed(impl::real_if_needed(v(0))) +
+                            impl::abs_if_needed(impl::imag_if_needed(v(0)));
+
+    for (SizeType i = 1; i < v.extent(0); ++i) {
+      magnitude_type val = impl::abs_if_needed(impl::real_if_needed(v(i))) +
+                           impl::abs_if_needed(impl::imag_if_needed(v(i)));
+
+      if (maxVal < val) {
+        maxVal = val;
+        maxInd = i;
+      }
+    }
+
+    return maxInd;
+  }
 }
 
 } // end anonymous namespace
@@ -99,11 +97,11 @@ template<class ElementType,
          class SizeType, ::std::size_t ext0,
          class Layout,
          class Accessor>
-SizeType idx_abs_max(
-  std::experimental::linalg::impl::inline_exec_t&& /* exec */,
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> v)
+SizeType vector_idx_abs_max(
+  impl::inline_exec_t&& /* exec */,
+  mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> v)
 {
-  return idx_abs_max_default_impl(v);
+  return vector_idx_abs_max_default_impl(v);
 }
 
 template<class ExecutionPolicy,
@@ -111,23 +109,23 @@ template<class ExecutionPolicy,
          class SizeType, ::std::size_t ext0,
          class Layout,
          class Accessor>
-SizeType idx_abs_max(
+SizeType vector_idx_abs_max(
   ExecutionPolicy&& exec,
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> v)
+  mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> v)
 {
   if (v.extent(0) == 0) {
     return std::numeric_limits<SizeType>::max();
   }
 
-  constexpr bool use_custom = is_custom_idx_abs_max_avail<
-    decltype(execpolicy_mapper(exec)), decltype(v)
+  constexpr bool use_custom = is_custom_vector_idx_abs_max_avail<
+    decltype(impl::map_execpolicy_with_check(exec)), decltype(v)
     >::value;
 
-  if constexpr(use_custom){
-    return idx_abs_max(execpolicy_mapper(exec), v);
+  if constexpr (use_custom) {
+    return vector_idx_abs_max(impl::map_execpolicy_with_check(exec), v);
   }
-  else{
-    return idx_abs_max(std::experimental::linalg::impl::inline_exec_t(), v);
+  else {
+    return vector_idx_abs_max(impl::inline_exec_t{}, v);
   }
 }
 
@@ -135,15 +133,15 @@ template<class ElementType,
          class SizeType, ::std::size_t ext0,
          class Layout,
          class Accessor>
-SizeType idx_abs_max(
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> v)
+SizeType vector_idx_abs_max(
+  mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> v)
 {
-  return idx_abs_max(std::experimental::linalg::impl::default_exec_t(), v);
+  return vector_idx_abs_max(impl::default_exec_t{}, v);
 }
 
 } // end namespace linalg
 } // end inline namespace __p1673_version_0
-} // end namespace experimental
-} // end namespace std
+} // end namespace MDSPAN_IMPL_PROPOSED_NAMESPACE
+} // end namespace MDSPAN_IMPL_STANDARD_NAMESPACE
 
 #endif //LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_BLAS1_VECTOR_IDX_ABS_MAX_HPP_

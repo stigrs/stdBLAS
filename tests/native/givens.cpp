@@ -1,13 +1,11 @@
 #include "./gtest_fixtures.hpp"
-
-#include <experimental/linalg>
 #include <limits>
 
 namespace {
-  using std::experimental::linalg::givens_rotation_setup;
-  using std::experimental::linalg::givens_rotation_apply;
+  using LinearAlgebra::setup_givens_rotation;
+  using LinearAlgebra::apply_givens_rotation;
 
-  TEST(givens_rotation_setup, complex_double)
+  TEST(setup_givens_rotation, complex_double)
   {
     using std::abs;
     using std::hypot;
@@ -36,7 +34,7 @@ namespace {
          scalingFactor *= 2.0) {
       const scalar_t a = scalingFactor * ONE;
       const scalar_t b = ZERO;
-      givens_rotation_setup(a, b, c, s, r);
+      setup_givens_rotation(a, b, c, s, r);
 
       EXPECT_EQ( c*c + s*s, ONE );
       EXPECT_EQ( hypot(abs(a), abs(b)), r );
@@ -50,7 +48,7 @@ namespace {
          scalingFactor *= 2.0) {
       const scalar_t a = ZERO;
       const scalar_t b = scalingFactor * ONE;
-      givens_rotation_setup(a, b, c, s, r);
+      setup_givens_rotation(a, b, c, s, r);
 
       EXPECT_EQ( c*c + s*s, ONE );
       EXPECT_EQ( hypot(abs(a), abs(b)), r );
@@ -68,7 +66,7 @@ namespace {
          scalingFactor *= 2.0) {
       const scalar_t a = scalingFactor * ONE_OVER_SQRT_TWO * ONE;
       const scalar_t b = scalingFactor * ONE_OVER_SQRT_TWO * ONE;
-      givens_rotation_setup(a, b, c, s, r);
+      setup_givens_rotation(a, b, c, s, r);
 
       EXPECT_TRUE( abs(c*c + s*s - ONE) <= tol );
       EXPECT_TRUE( abs(c - s) <= tol );
@@ -76,7 +74,7 @@ namespace {
     }
   }
 
-  TEST(givens_rotation_setup, double)
+  TEST(setup_givens_rotation, double)
   {
     using std::abs;
     using std::hypot;
@@ -105,7 +103,7 @@ namespace {
          scalingFactor *= 2.0) {
       const scalar_t a = scalingFactor * ONE;
       const scalar_t b = ZERO;
-      givens_rotation_setup(a, b, c, s, r);
+      setup_givens_rotation(a, b, c, s, r);
 
       EXPECT_EQ( c*c + s*s, ONE );
       EXPECT_EQ( hypot(abs(a), abs(b)), r );
@@ -119,7 +117,7 @@ namespace {
          scalingFactor *= 2.0) {
       const scalar_t a = ZERO;
       const scalar_t b = scalingFactor * ONE;
-      givens_rotation_setup(a, b, c, s, r);
+      setup_givens_rotation(a, b, c, s, r);
 
       EXPECT_EQ( c*c + s*s, ONE );
       EXPECT_EQ( hypot(abs(a), abs(b)), r );
@@ -137,7 +135,7 @@ namespace {
          scalingFactor *= 2.0) {
       const scalar_t a = scalingFactor * ONE_OVER_SQRT_TWO * ONE;
       const scalar_t b = scalingFactor * ONE_OVER_SQRT_TWO * ONE;
-      givens_rotation_setup(a, b, c, s, r);
+      setup_givens_rotation(a, b, c, s, r);
 
       EXPECT_TRUE( abs(c*c + s*s - ONE) <= tol );
       EXPECT_TRUE( abs(c - s) <= tol );
@@ -147,7 +145,7 @@ namespace {
     }
   }
 
-  TEST(givens_rotation_apply, double)
+  TEST(apply_givens_rotation, double)
   {
     using real_t = double;
     using scalar_t = real_t;
@@ -171,7 +169,7 @@ namespace {
       const real_t c(1.0);
       const scalar_t s(0.0);
 
-      givens_rotation_apply(x, y, c, s);
+      apply_givens_rotation(x, y, c, s);
       for (std::size_t k = 0; k < vectorSize; ++k) {
         scalar_t x_k(real_t(k) + 4.0);
         scalar_t y_k(real_t(k) + 5.0);
@@ -188,7 +186,7 @@ namespace {
       const real_t c(0.0);
       const scalar_t s(1.0);
 
-      givens_rotation_apply(x, y, c, s);
+      apply_givens_rotation(x, y, c, s);
       for (std::size_t k = 0; k < vectorSize; ++k) {
         scalar_t x_k(real_t(k) + 4.0);
         scalar_t y_k(real_t(k) + 5.0);
@@ -203,7 +201,7 @@ namespace {
     }
   }
 
-  TEST(givens_rotation_apply, complex_double)
+  TEST(apply_givens_rotation, complex_double)
   {
     using real_t = double;
     using scalar_t = std::complex<real_t>;
@@ -229,7 +227,7 @@ namespace {
       const real_t c(1.0);
       const scalar_t s(0.0, 0.0);
 
-      givens_rotation_apply(x, y, c, s);
+      apply_givens_rotation(x, y, c, s);
       for (std::size_t k = 0; k < vectorSize; ++k) {
         scalar_t x_k(real_t(k) + 4.0, -real_t(k) - 1.0);
         scalar_t y_k(real_t(k) + 5.0, -real_t(k) - 2.0);
@@ -246,7 +244,7 @@ namespace {
       const real_t c(0.0);
       const scalar_t s(1.0, 0.0);
 
-      givens_rotation_apply(x, y, c, s);
+      apply_givens_rotation(x, y, c, s);
       for (std::size_t k = 0; k < vectorSize; ++k) {
         scalar_t x_k(real_t(k) + 4.0, -real_t(k) - 1.0);
         scalar_t y_k(real_t(k) + 5.0, -real_t(k) - 2.0);

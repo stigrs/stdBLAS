@@ -1,18 +1,7 @@
-// To try using subscript operator comment in macro below
-// the header will by default also check for the feature macro, and enable it
-// defining the macro to 0 will overwrite the automatic setting
-// x86-64 clang (experimental auto NSDMI) supports the operator, but you need
-// to explicitly comment in below macro
-//#define MDSPAN_USE_BRACKET_OPERATOR 1
-
-// To force enable operator() comment in the macro below
-// You can enable both at the same time. 
-//#define MDSPAN_USE_PAREN_OPERATOR 0
-
 #define P1673_CONJUGATED_SCALAR_ARITHMETIC_OPERATORS_REFERENCE_OVERLOADS 1
 
-#include "gtest/gtest.h"
-#include <experimental/linalg>
+#include "./gtest_fixtures.hpp"
+#include "experimental/__p1673_bits/proxy_reference.hpp"
 
 ///////////////////////////////////////////////////////////
 // Custom real number type for tests
@@ -30,170 +19,173 @@ struct FakeRealNumber {
   }
 #endif
 };
-// Non-arithmetic types need a definition of conj,
-// else conjugated_scalar won't compile with them.
-FakeRealNumber conj(const FakeRealNumber& x) { return x; }
 
 // Custom complex number type
 
-struct FakeComplex {
-    double real;
-    double imag;
+class FakeComplex {
+private:
+  double real_ = 0.0;
+  double imag_ = 0.0;
+
+public:
+  FakeComplex() = default;
+  FakeComplex(double re, double im) : real_(re), imag_(im) {}
+
+  friend double real(FakeComplex z) {
+    return z.real_;
+  }
+
+  friend double imag(FakeComplex z) {
+    return z.imag_;
+  }
+
+  friend double abs(FakeComplex z) {
+    return std::sqrt(z.real_ * z.real_ + z.imag_ * z.imag_);
+  }
+
+  friend FakeComplex conj(FakeComplex z) {
+    return {z.real_, -z.imag_};
+  }
 
 #ifdef __cpp_impl_three_way_comparison
-    bool operator==(const FakeComplex&) const = default;
+  bool operator==(const FakeComplex&) const = default;
 #else
   friend bool operator==(const FakeComplex& x, const FakeComplex& y)
   {
-    return x.real == y.real && x.imag == y.imag;
+    return x.real_ == y.real_ && x.imag_ == y.imag_;
   }
 #endif
 
-    constexpr FakeComplex& operator+=(const FakeComplex& other)
-    {
-        real += other.real;
-        imag += other.imag;
-        return *this;
-    }
-    constexpr FakeComplex& operator-=(const FakeComplex& other)
-    {
-        real -= other.real;
-        imag -= other.imag;
-        return *this;
-    }
-    constexpr FakeComplex& operator*=(const FakeComplex& other)
-    {
-        real = real * other.real - imag * other.imag;
-        imag = imag * other.real + real * other.imag;
-        return *this;
-    }
-    constexpr FakeComplex& operator/=(const FakeComplex& other)
-    {
-        // just for illustration; please don't implement it this way.
-        const auto other_mag = other.real * other.real + other.imag * other.imag;
-        real = (real * other.real + imag * other.imag) / other_mag;
-        imag = (imag * other.real - real * other.imag) / other_mag;
-        return *this;
-    }
+  constexpr FakeComplex& operator+=(const FakeComplex& other)
+  {
+    real_ += other.real_;
+    imag_ += other.imag_;
+    return *this;
+  }
+  constexpr FakeComplex& operator-=(const FakeComplex& other)
+  {
+    real_ -= other.real_;
+    imag_ -= other.imag_;
+    return *this;
+  }
+  constexpr FakeComplex& operator*=(const FakeComplex& other)
+  {
+    real_ = real_ * other.real_ - imag_ * other.imag_;
+    imag_ = imag_ * other.real_ + real_ * other.imag_;
+    return *this;
+  }
+  constexpr FakeComplex& operator/=(const FakeComplex& other)
+  {
+    // just for illustration; please don't implement it this way.
+    const auto other_mag = other.real_ * other.real_ + other.imag_ * other.imag_;
+    real_ = (real_ * other.real_ + imag_ * other.imag_) / other_mag;
+    imag_ = (imag_ * other.real_ - real_ * other.imag_) / other_mag;
+    return *this;
+  }
 
-    constexpr FakeComplex& operator+=(const double other)
-    {
-        real += other;
-        return *this;
-    }
-    constexpr FakeComplex& operator-=(const double other)
-    {
-        real -= other;
-        return *this;
-    }
-    constexpr FakeComplex& operator*=(const double other)
-    {
-        real *= other;
-        imag *= other;
-        return *this;
-    }
-    constexpr FakeComplex& operator/=(const double other)
-    {
-        real /= other;
-        imag /= other;
-        return *this;
-    }
+  constexpr FakeComplex& operator+=(const double other)
+  {
+    real_ += other;
+    return *this;
+  }
+  constexpr FakeComplex& operator-=(const double other)
+  {
+    real_ -= other;
+    return *this;
+  }
+  constexpr FakeComplex& operator*=(const double other)
+  {
+    real_ *= other;
+    imag_ *= other;
+    return *this;
+  }
+  constexpr FakeComplex& operator/=(const double other)
+  {
+    real_ /= other;
+    imag_ /= other;
+    return *this;
+  }
 };
 
 // Unary operators
 
 FakeComplex operator+( const FakeComplex& val )
 {
-    return val;
+  return val;
 }
 FakeComplex operator-( const FakeComplex& val )
 {
-    return {-val.real, -val.imag};
+  return {-real(val), -imag(val)};
 }
 
 // Binary homogeneous operators
 
 FakeComplex operator+(const FakeComplex& z, const FakeComplex& w)
 {
-    return {z.real + w.real, z.imag + w.imag};
+  return {real(z) + real(w), imag(z) + imag(w)};
 }
 FakeComplex operator-(const FakeComplex& z, const FakeComplex& w)
 {
-    return {z.real - w.real, z.imag - w.imag};
+  return {real(z) - real(w), imag(z) - imag(w)};
 }
 FakeComplex operator*(const FakeComplex& z, const FakeComplex& w)
 {
-    return {z.real * w.real - z.imag * w.imag,
-        z.imag * w.real + z.real * w.imag};
+  return {real(z) * real(w) - imag(z) * imag(w),
+    imag(z) * real(w) + real(z) * imag(w)};
 }
 FakeComplex operator/(const FakeComplex& z, const FakeComplex& w)
 {
-    // just for illustration; please don't implement it this way.
-    const auto w_mag = w.real * w.real + w.imag * w.imag;
-    return {(z.real * w.real + z.imag * w.imag) / w_mag,
-        (z.imag * w.real - z.real * w.imag) / w_mag};
+  // just for illustration; please don't implement it this way.
+  const auto w_mag = real(w) * real(w) + imag(w) * imag(w);
+  return {(real(z) * real(w) + imag(z) * imag(w)) / w_mag,
+    (imag(z) * real(w) - real(z) * imag(w)) / w_mag};
 }
 
 // Binary (complex,real) operators
 
 FakeComplex operator+(const FakeComplex& z, const double w)
 {
-    return {z.real + w, z.imag};
+  return {real(z) + w, imag(z)};
 }
 FakeComplex operator-(const FakeComplex& z, const double w)
 {
-    return {z.real - w, z.imag};
+  return {real(z) - w, imag(z)};
 }
 FakeComplex operator*(const FakeComplex& z, const double w)
 {
-    return {z.real * w, z.imag * w};
+  return {real(z) * w, imag(z) * w};
 }
 FakeComplex operator/(const FakeComplex& z, const double w)
 {
-    return {z.real / w, z.imag / w};
+  return {real(z) / w, imag(z) / w};
 }
 
 // Binary (real,complex) operators
 
 FakeComplex operator+(const double z, const FakeComplex& w)
 {
-    return {z + w.real, z + w.imag};
+  return {z + real(w), z + imag(w)};
 }
 FakeComplex operator-(const double z, const FakeComplex& w)
 {
-    return {z - w.real, -w.imag};
+  return {z - real(w), -imag(w)};
 }
 FakeComplex operator*(const double z, const FakeComplex& w)
 {
-    return {z * w.real, z * w.imag};
+  return {z * real(w), z * imag(w)};
 }
 FakeComplex operator/(const double z, const FakeComplex& w)
 {
-    // just for illustration; please don't implement it this way.
-    const auto w_mag = w.real * w.real + w.imag * w.imag;
-    return {
-        (z * w.real) / w_mag,
-        (-(z * w.imag)) / w_mag
-    };
+  // just for illustration; please don't implement it this way.
+  const auto w_mag = real(w) * real(w) + imag(w) * imag(w);
+  return {
+    (z * real(w)) / w_mag,
+    (-(z * imag(w))) / w_mag
+  };
 }
 
 // Specialize test helper traits (P1673 does NOT need these)
 namespace test_helpers {
-
-template<class T>
-constexpr bool is_complex_v = false;
-
-template<>
-constexpr bool is_complex_v<std::complex<float>> = true;
-
-template<>
-constexpr bool is_complex_v<std::complex<double>> = true;
-
-template<>
-constexpr bool is_complex_v<std::complex<long double>> = true;
-
-template<>
-constexpr bool is_complex_v<FakeComplex> = true;
 
 template<class T>
 static constexpr bool is_atomic_ref_not_arithmetic_v = false;
@@ -205,18 +197,6 @@ static constexpr bool is_atomic_ref_not_arithmetic_v<std::atomic_ref<U>> = ! std
 
 } // namespace test_helpers
 
-// FakeComplex conj implementation
-FakeComplex conj(const FakeComplex& z) { return {z.real, -z.imag}; }
-
-// FakeComplex abs implementation
-auto abs(const FakeComplex& z) { return sqrt(z.real * z.real + z.imag * z.imag); }
-
-// FakeComplex real implementation
-auto real(const FakeComplex& z) { return z.real; }
-
-// FakeComplex imag implementation
-auto imag(const FakeComplex& z) { return z.imag; }
-
 ///////////////////////////////////////////////////////////
 // conj_if_needed tests
 ///////////////////////////////////////////////////////////
@@ -224,7 +204,7 @@ auto imag(const FakeComplex& z) { return z.imag; }
 template<class Real>
 void test_real_conj_if_needed()
 {
-  using std::experimental::linalg::impl::conj_if_needed;
+  using LinearAlgebra::impl::conj_if_needed;
 
   Real z(2.0);
   const Real z_conj_expected(2.0);
@@ -237,8 +217,8 @@ void test_real_conj_if_needed()
 template<class Real>
 void test_complex_conj_if_needed()
 {
-  using std::experimental::linalg::impl::conj_if_needed;
-  
+  using LinearAlgebra::impl::conj_if_needed;
+
   std::complex<Real> z(2.0, -3.0);
   const std::complex<Real> z_conj_expected(2.0, 3.0);
 
@@ -273,8 +253,8 @@ template<class Reference, class Value>
 void test_conjugated_scalar_from_reference(Reference zd, Value zd_orig)
 {
   using test_helpers::is_atomic_ref_not_arithmetic_v;
-  using std::experimental::linalg::impl::conj_if_needed;
-  using std::experimental::linalg::conjugated_scalar;  
+  using LinearAlgebra::impl::conj_if_needed;
+  using LinearAlgebra::conjugated_scalar;
   using value_type = typename std::remove_cv_t<Value>;
 
 #ifdef P1673_CONJUGATED_SCALAR_ARITHMETIC_OPERATORS_REFERENCE_OVERLOADS
@@ -318,7 +298,7 @@ void test_conjugated_scalar_from_reference(Reference zd, Value zd_orig)
       value_type left_mul_result = cszd * zd;
       value_type left_mul_result_expected = conj_if_needed(zd_orig) * zd_orig;
       EXPECT_EQ(left_mul_result, left_mul_result_expected);
-      if constexpr (is_atomic_ref_not_arithmetic_v<Reference>) { 
+      if constexpr (is_atomic_ref_not_arithmetic_v<Reference>) {
         EXPECT_EQ(zd.load(), zd_orig);
       } else {
         EXPECT_EQ(zd, zd_orig);
@@ -328,7 +308,7 @@ void test_conjugated_scalar_from_reference(Reference zd, Value zd_orig)
       value_type left_div_result = cszd / zd;
       value_type left_div_result_expected = conj_if_needed(zd_orig) / zd_orig;
       EXPECT_EQ(left_div_result, left_div_result_expected);
-      if constexpr (is_atomic_ref_not_arithmetic_v<Reference>) {    
+      if constexpr (is_atomic_ref_not_arithmetic_v<Reference>) {
         EXPECT_EQ(zd.load(), zd_orig);
       } else {
         EXPECT_EQ(zd, zd_orig);
@@ -351,7 +331,7 @@ void test_conjugated_scalar_from_reference(Reference zd, Value zd_orig)
   value_type left_sub_result2_expected =
     conj_if_needed(zd_orig) - get_test_xvalue(value_type{});
   EXPECT_EQ(left_sub_result2, left_sub_result2_expected);
-  if constexpr (is_atomic_ref_not_arithmetic_v<Reference>) {    
+  if constexpr (is_atomic_ref_not_arithmetic_v<Reference>) {
     EXPECT_EQ(zd.load(), zd_orig);
   } else {
     EXPECT_EQ(zd, zd_orig);
@@ -587,7 +567,7 @@ void test_complex_conjugated_scalar()
   {
     using value_type = std::complex<Real>;
     using inner_reference_type = value_type&;
-    using std::experimental::linalg::scaled_scalar;
+    using LinearAlgebra::scaled_scalar;
     using reference_type = scaled_scalar<Real, inner_reference_type, value_type>;
 
     const Real scalingFactor = 3.0;
@@ -603,7 +583,7 @@ template<class Value>
 void test_arithmetic_conjugated_scalar()
 {
   static_assert(std::is_arithmetic_v<Value>);
-  
+
   std::cerr << "test_arithmetic_conjugated_scalar" << std::endl;
 
   Value zd_orig{2};
@@ -653,8 +633,8 @@ void test_scaled_scalar_from_reference(
 {
   std::cerr << "test_scaled_scalar_from_reference" << std::endl;
 
-  using std::experimental::linalg::impl::conj_if_needed;  
-  using std::experimental::linalg::scaled_scalar;
+  using LinearAlgebra::impl::conj_if_needed;
+  using LinearAlgebra::scaled_scalar;
   using value_type = typename std::remove_cv_t<Value>;
   constexpr bool is_atomic_ref_not_arithmetic =
     test_helpers::is_atomic_ref_not_arithmetic_v<Reference>;
@@ -941,7 +921,7 @@ void test_two_scaled_scalars_from_reference(
 	    << scalingFactorName << ", " << referenceName
 	    << ", " << valueName << ">" << std::endl;
 
-  using std::experimental::linalg::scaled_scalar;  
+  using LinearAlgebra::scaled_scalar;
   using value_type = typename std::remove_cv_t<Value>;
   constexpr bool is_atomic_ref_not_arithmetic =
     test_helpers::is_atomic_ref_not_arithmetic_v<Reference>;
@@ -1052,7 +1032,7 @@ void test_arithmetic_scaled_scalar(const char valueName[])
   const Value zd2{3};
   test_scaled_scalar_from_reference<
     Value, const Value&, Value>(scalingFactor, zd2, zd2_orig);
-    
+
   const std::string valueRefName = std::string("const ") + valueName + "&";
   test_two_scaled_scalars_from_reference<
     Value, const Value&, Value>(scalingFactor, zd2, zd2_orig,
@@ -1095,131 +1075,131 @@ namespace {
   }
 
   template<class R>
-  void test_imag_part_complex()
+  void test_imag_if_needed_complex()
   {
-    using std::experimental::linalg::impl::imag_part;
+    using LinearAlgebra::impl::imag_if_needed;
     std::complex<R> z{R(3.0), R(4.0)};
-    auto z_imag = imag_part(z);
+    auto z_imag = imag_if_needed(z);
     EXPECT_EQ(z_imag, R(4.0));
     static_assert(std::is_same_v<decltype(z_imag), R>);
   }
   template<class T>
-  void test_imag_part_floating_point()
+  void test_imag_if_needed_floating_point()
   {
-    using std::experimental::linalg::impl::imag_part;
+    using LinearAlgebra::impl::imag_if_needed;
     T x = 9.0;
-    auto x_imag = imag_part(x);
+    auto x_imag = imag_if_needed(x);
     EXPECT_EQ(x_imag, T(0.0));
     static_assert(std::is_same_v<decltype(x_imag), T>);
   }
   template<class T>
-  void test_imag_part_integral()
+  void test_imag_if_needed_integral()
   {
-    using std::experimental::linalg::impl::imag_part;
+    using LinearAlgebra::impl::imag_if_needed;
     T x = 3;
-    auto x_imag = imag_part(x);
+    auto x_imag = imag_if_needed(x);
     EXPECT_EQ(x_imag, T(0));
     static_assert(std::is_same_v<decltype(x_imag), T>);
   }
 
-  TEST(proxy_refs, imag_part)
+  TEST(proxy_refs, imag_if_needed)
   {
-    test_imag_part_complex<float>();
-    test_imag_part_complex<double>();
-    test_imag_part_complex<long double>();
-    
-    test_imag_part_floating_point<float>();
-    test_imag_part_floating_point<double>();
-    test_imag_part_floating_point<long double>();    
+    test_imag_if_needed_complex<float>();
+    test_imag_if_needed_complex<double>();
+    test_imag_if_needed_complex<long double>();
 
-    test_imag_part_integral<int8_t>();
-    test_imag_part_integral<uint8_t>();    
-    test_imag_part_integral<int16_t>();
-    test_imag_part_integral<uint16_t>();    
-    test_imag_part_integral<int32_t>();
-    test_imag_part_integral<uint32_t>();    
-    test_imag_part_integral<int64_t>();
-    test_imag_part_integral<uint64_t>();    
+    test_imag_if_needed_floating_point<float>();
+    test_imag_if_needed_floating_point<double>();
+    test_imag_if_needed_floating_point<long double>();
+
+    test_imag_if_needed_integral<int8_t>();
+    test_imag_if_needed_integral<uint8_t>();
+    test_imag_if_needed_integral<int16_t>();
+    test_imag_if_needed_integral<uint16_t>();
+    test_imag_if_needed_integral<int32_t>();
+    test_imag_if_needed_integral<uint32_t>();
+    test_imag_if_needed_integral<int64_t>();
+    test_imag_if_needed_integral<uint64_t>();
 
     {
-      using std::experimental::linalg::impl::imag_part;
+      using LinearAlgebra::impl::imag_if_needed;
       FakeComplex z{3.0, 4.0};
-      auto z_imag = imag_part(z);
+      auto z_imag = imag_if_needed(z);
       EXPECT_EQ(z_imag, 4.0);
-      static_assert(std::is_same_v<decltype(z_imag), decltype(z.imag)>);
+      static_assert(std::is_same_v<decltype(z_imag), decltype(imag(z))>);
     }
     {
-      using std::experimental::linalg::impl::imag_part;
+      using LinearAlgebra::impl::imag_if_needed;
       FakeRealNumber x{3.0};
-      auto x_imag = imag_part(x);
+      auto x_imag = imag_if_needed(x);
       EXPECT_EQ(x_imag, FakeRealNumber{});
       static_assert(std::is_same_v<decltype(x_imag), FakeRealNumber>);
     }
   }
 
   template<class R>
-  void test_real_part_complex()
+  void test_real_if_needed_complex()
   {
-    using std::experimental::linalg::impl::real_part;
+    using LinearAlgebra::impl::real_if_needed;
     std::complex<R> z{R(3.0), R(4.0)};
-    auto z_imag = real_part(z);
+    auto z_imag = real_if_needed(z);
     EXPECT_EQ(z_imag, R(3.0));
     static_assert(std::is_same_v<decltype(z_imag), R>);
   }
   template<class T>
-  void test_real_part_floating_point()
+  void test_real_if_needed_floating_point()
   {
-    using std::experimental::linalg::impl::real_part;
+    using LinearAlgebra::impl::real_if_needed;
     T x = 9.0;
-    auto x_imag = real_part(x);
+    auto x_imag = real_if_needed(x);
     EXPECT_EQ(x_imag, T(9.0));
     static_assert(std::is_same_v<decltype(x_imag), T>);
   }
   template<class T>
-  void test_real_part_integral()
+  void test_real_if_needed_integral()
   {
-    using std::experimental::linalg::impl::real_part;
+    using LinearAlgebra::impl::real_if_needed;
     T x = 3;
-    auto x_imag = real_part(x);
+    auto x_imag = real_if_needed(x);
     EXPECT_EQ(x_imag, T(3));
     static_assert(std::is_same_v<decltype(x_imag), T>);
   }
 
-  TEST(proxy_refs, real_part)
+  TEST(proxy_refs, real_if_needed)
   {
-    test_real_part_complex<float>();
-    test_real_part_complex<double>();
-    test_real_part_complex<long double>();
-    
-    test_real_part_floating_point<float>();
-    test_real_part_floating_point<double>();
-    test_real_part_floating_point<long double>();    
+    test_real_if_needed_complex<float>();
+    test_real_if_needed_complex<double>();
+    test_real_if_needed_complex<long double>();
 
-    test_real_part_integral<int8_t>();
-    test_real_part_integral<uint8_t>();    
-    test_real_part_integral<int16_t>();
-    test_real_part_integral<uint16_t>();    
-    test_real_part_integral<int32_t>();
-    test_real_part_integral<uint32_t>();    
-    test_real_part_integral<int64_t>();
-    test_real_part_integral<uint64_t>();    
+    test_real_if_needed_floating_point<float>();
+    test_real_if_needed_floating_point<double>();
+    test_real_if_needed_floating_point<long double>();
+
+    test_real_if_needed_integral<int8_t>();
+    test_real_if_needed_integral<uint8_t>();
+    test_real_if_needed_integral<int16_t>();
+    test_real_if_needed_integral<uint16_t>();
+    test_real_if_needed_integral<int32_t>();
+    test_real_if_needed_integral<uint32_t>();
+    test_real_if_needed_integral<int64_t>();
+    test_real_if_needed_integral<uint64_t>();
 
     {
-      using std::experimental::linalg::impl::real_part;
+      using LinearAlgebra::impl::real_if_needed;
       FakeComplex z{3.0, 4.0};
-      auto z_imag = real_part(z);
+      auto z_imag = real_if_needed(z);
       EXPECT_EQ(z_imag, 3.0);
-      static_assert(std::is_same_v<decltype(z_imag), decltype(z.imag)>);
+      static_assert(std::is_same_v<decltype(z_imag), decltype(imag(z))>);
     }
     {
-      using std::experimental::linalg::impl::real_part;
+      using LinearAlgebra::impl::real_if_needed;
       FakeRealNumber x{3.0};
-      auto x_real = real_part(x);
+      auto x_real = real_if_needed(x);
       EXPECT_EQ(x_real, FakeRealNumber{3.0});
       static_assert(std::is_same_v<decltype(x_real), FakeRealNumber>);
     }
   }
-  
+
   TEST(proxy_refs, conjugated_scalar)
   {
     test_complex_conjugated_scalar<float>();
@@ -1238,7 +1218,7 @@ namespace {
     test_FakeComplex_conjugated_scalar();
 
     FakeRealNumber fn{4.2};
-    using std::experimental::linalg::conjugated_scalar;
+    using LinearAlgebra::conjugated_scalar;
     conjugated_scalar<FakeRealNumber&, FakeRealNumber> fncs(fn);
     EXPECT_EQ(fn, FakeRealNumber(fncs));
   }

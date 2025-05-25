@@ -1,52 +1,27 @@
-/*
 //@HEADER
 // ************************************************************************
 //
-//                        Kokkos v. 2.0
-//              Copyright (2019) Sandia Corporation
+//                        Kokkos v. 4.0
+//       Copyright (2022) National Technology & Engineering
+//               Solutions of Sandia, LLC (NTESS).
 //
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-// the U.S. Government retains certain rights in this software. //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
 //
-// 1. Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the Corporation nor the names of the
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Questions? Contact Christian R. Trott (crtrott@sandia.gov)
+// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
+// See https://kokkos.org/LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // ************************************************************************
 //@HEADER
-*/
 
 #ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_TRANSPOSED_HPP_
 #define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_TRANSPOSED_HPP_
 
-#include <experimental/mdspan>
+#include <mdspan/mdspan.hpp>
 
-namespace std {
-namespace experimental {
+namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
+namespace MDSPAN_IMPL_PROPOSED_NAMESPACE {
 inline namespace __p1673_version_0 {
 namespace linalg {
 
@@ -59,7 +34,7 @@ namespace impl {
   )
   struct transpose_extents_t_impl
   {
-    using type = extents<typename Extents::size_type, Extents::static_extent(1), Extents::static_extent(0)>;
+    using type = extents<typename Extents::index_type, Extents::static_extent(1), Extents::static_extent(0)>;
   };
 
   template<class Extents>
@@ -72,8 +47,8 @@ namespace impl {
   transpose_extents_t<Extents> transpose_extents(const Extents& e)
   {
     static_assert(std::is_same_v<
-      typename transpose_extents_t<Extents>::size_type,
-      typename Extents::size_type>, "Please fix transpose_extents_t to account "
+      typename transpose_extents_t<Extents>::index_type,
+      typename Extents::index_type>, "Please fix transpose_extents_t to account "
       "for P2553, which adds a template parameter SizeType to extents.");
 
     constexpr size_t ext0 = Extents::static_extent(0);
@@ -98,83 +73,78 @@ namespace impl {
 template<class Layout>
 class layout_transpose {
 public:
+  using nested_layout_type = Layout;
+
   template<class Extents>
   struct mapping {
   private:
     using nested_mapping_type =
       typename Layout::template mapping<impl::transpose_extents_t<Extents>>;
-    nested_mapping_type nested_mapping_;
 
   public:
     using extents_type = Extents;
+    using index_type = typename extents_type::index_type;
     using size_type = typename extents_type::size_type;
+    using rank_type = typename extents_type::rank_type;
     using layout_type = layout_transpose;
 
     constexpr explicit mapping(const nested_mapping_type& map)
-      : nested_mapping_(map) {}
+      : nested_mapping_(map),
+        extents_(impl::transpose_extents(map.extents()))
+    {}
 
-    constexpr extents_type extents() const
-      noexcept(noexcept(nested_mapping_.extents()))
+    constexpr const extents_type& extents() const noexcept
     {
-      return impl::transpose_extents(nested_mapping_.extents());
+      return extents_;
     }
 
-    constexpr size_type required_span_size() const
+    constexpr index_type required_span_size() const
       noexcept(noexcept(nested_mapping_.required_span_size()))
     {
       return nested_mapping_.required_span_size();
     }
 
-    template<class IndexType, class... Indices>
-    typename Extents::size_type operator() (Indices... rest, IndexType i, IndexType j) const
-      noexcept(noexcept(nested_mapping_(rest..., j, i)))
+    template<class IndexType0, class IndexType1>
+      requires(std::is_convertible_v<IndexType0, index_type> &&
+               std::is_convertible_v<IndexType1, index_type>)
+    index_type operator() (IndexType0 i, IndexType1 j) const
     {
-      return nested_mapping_(rest..., j, i);
+      return nested_mapping_(j, i);
     }
 
-    nested_mapping_type nested_mapping() const
+    const nested_mapping_type& nested_mapping() const
     {
       return nested_mapping_;
     }
 
-    static constexpr bool is_always_unique() {
+    static constexpr bool is_always_unique() noexcept {
       return nested_mapping_type::is_always_unique();
     }
-    static constexpr bool is_always_contiguous() {
+    static constexpr bool is_always_exhaustive() noexcept {
       return nested_mapping_type::is_always_contiguous();
     }
-    static constexpr bool is_always_strided() {
+    static constexpr bool is_always_strided() noexcept {
       return nested_mapping_type::is_always_strided();
     }
 
     constexpr bool is_unique() const
-      noexcept(noexcept(nested_mapping_.is_unique()))
     {
       return nested_mapping_.is_unique();
     }
-    constexpr bool is_contiguous() const
-      noexcept(noexcept(nested_mapping_.is_contiguous()))
+    constexpr bool is_exhaustive() const
     {
-      return nested_mapping_.is_contiguous();
+      return nested_mapping_.is_exhaustive();
     }
     constexpr bool is_strided() const
-      noexcept(noexcept(nested_mapping_.is_strided()))
     {
       return nested_mapping_.is_strided();
     }
 
-    constexpr size_type stride(size_t r) const
-      noexcept(noexcept(nested_mapping_.stride(r)))
+    constexpr index_type stride(size_t r) const
     {
-      if (r == extents_type::rank() - 1) {
-	return nested_mapping_.stride(extents_type::rank() - 2);
-      }
-      else if (r == extents_type::rank() - 2) {
-	return nested_mapping_.stride(extents_type::rank() - 1);
-      }
-      else {
-	return nested_mapping_.stride(r);
-      }
+      assert(this->is_strided());
+      assert(r < extents_type::rank());
+      return nested_mapping_.stride(r == 0 ? 1 : 0);
     }
 
     template<class OtherExtents>
@@ -183,6 +153,10 @@ public:
     {
       return lhs.nested_mapping_ == rhs.nested_mapping_;
     }
+
+  private:
+    nested_mapping_type nested_mapping_;
+    extents_type extents_;
   };
 };
 
@@ -201,7 +175,7 @@ namespace impl {
   struct transposed_element_accessor<
     ElementType, default_accessor<ElementType>>
   {
-    using element_type = std::add_const_t<ElementType>;
+    using element_type = ElementType;
     using accessor_type = default_accessor<element_type>;
 
     static accessor_type accessor(const default_accessor<ElementType>& a) { return accessor_type(a); }
@@ -261,32 +235,61 @@ namespace impl {
       // https://github.com/kokkos/stdBLAS/issues/242
       return return_mapping_type{
 	transpose_extents(orig_map.extents()),
-	std::array<typename extents_type::size_type, OriginalExtents::rank() /* orig_map.rank() */ >{
+	std::array<typename extents_type::index_type, OriginalExtents::rank() /* orig_map.rank() */ >{
 	  orig_map.stride(1),
 	  orig_map.stride(0)}};
     }
   };
 
+#if defined(LINALG_FIX_TRANSPOSED_FOR_PADDED_LAYOUTS)
+  template<size_t PaddingValue>
+  struct transposed_layout<layout_left_padded<PaddingValue>> {
+    using layout_type = layout_right_padded<PaddingValue>;
+
+    template<class OriginalExtents>
+    static auto mapping(const typename layout_left_padded<PaddingValue>::template mapping<OriginalExtents>& orig_map) {
+      using input_mapping_type =
+        typename layout_left_padded<PaddingValue>::template mapping<OriginalExtents>;
+      using output_extents_type =
+        transpose_extents_t<typename input_mapping_type::extents_type>;
+      using output_mapping_type =
+        typename layout_type::template mapping<output_extents_type>;
+
+      const auto padding_value = orig_map.stride(1);
+      return output_mapping_type{
+	transpose_extents(orig_map.extents()),
+        padding_value
+      };
+    }
+  };
+
+  template<size_t PaddingValue>
+  struct transposed_layout<layout_right_padded<PaddingValue>> {
+    using layout_type = layout_left_padded<PaddingValue>;
+
+    template<class OriginalExtents>
+    static auto mapping(const typename layout_right_padded<PaddingValue>::template mapping<OriginalExtents>& orig_map) {
+      using input_mapping_type =
+        typename layout_right_padded<PaddingValue>::template mapping<OriginalExtents>;
+      using output_extents_type =
+        transpose_extents_t<typename input_mapping_type::extents_type>;
+      using output_mapping_type =
+        typename layout_type::template mapping<output_extents_type>;
+
+      const auto padding_value = orig_map.stride(0);
+      return output_mapping_type{
+	transpose_extents(orig_map.extents()),
+        padding_value
+      };
+    }
+  };
+#endif // LINALG_FIX_TRANSPOSED_FOR_PADDED_LAYOUTS
+  
   template<class StorageOrder>
   using opposite_storage_t = std::conditional_t<
     std::is_same_v<StorageOrder, column_major_t>,
     row_major_t,
     column_major_t>;
-
-  template<class StorageOrder>
-  struct transposed_layout<layout_blas_general<StorageOrder>> {
-    using layout_type = layout_blas_general<
-      opposite_storage_t<StorageOrder>>;
-
-    template<class OriginalExtents>
-    static auto mapping(const typename layout_blas_general<StorageOrder>::template mapping<OriginalExtents>& orig_map) {
-      using original_mapping_type = typename layout_blas_general<StorageOrder>::template mapping<OriginalExtents>;
-      using extents_type = transpose_extents_t<typename original_mapping_type::extents_type>;
-      using return_mapping_type = typename layout_type::template mapping<extents_type>;
-      const auto whichStride = std::is_same_v<StorageOrder, column_major_t> ? orig_map.stride(1) : orig_map.stride(0);
-      return return_mapping_type{transpose_extents(orig_map.extents()), whichStride};
-    }
-  };
 
   template<class Triangle>
   using opposite_triangle_t = std::conditional_t<
@@ -329,7 +332,7 @@ auto transposed(mdspan<ElementType, Extents, Layout, Accessor> a)
 
 } // end namespace linalg
 } // end inline namespace __p1673_version_0
-} // end namespace experimental
-} // end namespace std
+} // end namespace MDSPAN_IMPL_PROPOSED_NAMESPACE
+} // end namespace MDSPAN_IMPL_STANDARD_NAMESPACE
 
 #endif //LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_TRANSPOSED_HPP_

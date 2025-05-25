@@ -1,44 +1,19 @@
-/*
 //@HEADER
 // ************************************************************************
 //
-//                        Kokkos v. 2.0
-//              Copyright (2019) Sandia Corporation
+//                        Kokkos v. 4.0
+//       Copyright (2022) National Technology & Engineering
+//               Solutions of Sandia, LLC (NTESS).
 //
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-// the U.S. Government retains certain rights in this software. //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
 //
-// 1. Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the Corporation nor the names of the
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Questions? Contact Christian R. Trott (crtrott@sandia.gov)
+// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
+// See https://kokkos.org/LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // ************************************************************************
 //@HEADER
-*/
 
 #ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_BLAS1_MATRIX_INF_NORM_HPP_
 #define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_BLAS1_MATRIX_INF_NORM_HPP_
@@ -46,8 +21,8 @@
 #include <cmath>
 #include <cstdlib>
 
-namespace std {
-namespace experimental {
+namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
+namespace MDSPAN_IMPL_PROPOSED_NAMESPACE {
 inline namespace __p1673_version_0 {
 namespace linalg {
 
@@ -70,7 +45,7 @@ struct is_custom_matrix_inf_norm_avail<
 	       ),
       Scalar
       >::value
-    && !linalg::impl::is_inline_exec_v<Exec>
+    && ! impl::is_inline_exec_v<Exec>
     >
   >
   : std::true_type{};
@@ -86,8 +61,8 @@ template<
     class Accessor,
     class Scalar>
 Scalar matrix_inf_norm(
-  std::experimental::linalg::impl::inline_exec_t&& /* exec */,
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, numRows, numCols>, Layout, Accessor> A,
+  impl::inline_exec_t&& /* exec */,
+  mdspan<ElementType, extents<SizeType, numRows, numCols>, Layout, Accessor> A,
   Scalar init)
 {
   using std::abs;
@@ -125,19 +100,18 @@ template<
   class Scalar>
 Scalar matrix_inf_norm(
   ExecutionPolicy&& exec,
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, numRows, numCols>, Layout, Accessor> A,
+  mdspan<ElementType, extents<SizeType, numRows, numCols>, Layout, Accessor> A,
   Scalar init)
 {
-
   constexpr bool use_custom = is_custom_matrix_inf_norm_avail<
-    decltype(execpolicy_mapper(exec)), decltype(A), Scalar
+    decltype(impl::map_execpolicy_with_check(exec)), decltype(A), Scalar
     >::value;
 
-  if constexpr(use_custom){
-    return matrix_inf_norm(execpolicy_mapper(exec), A, init);
+  if constexpr (use_custom) {
+    return matrix_inf_norm(impl::map_execpolicy_with_check(exec), A, init);
   }
   else{
-    return matrix_inf_norm(std::experimental::linalg::impl::inline_exec_t(), A, init);
+    return matrix_inf_norm(impl::inline_exec_t{}, A, init);
   }
 }
 
@@ -150,10 +124,10 @@ template<
     class Accessor,
     class Scalar>
 Scalar matrix_inf_norm(
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, numRows, numCols>, Layout, Accessor> A,
+  mdspan<ElementType, extents<SizeType, numRows, numCols>, Layout, Accessor> A,
   Scalar init)
 {
-  return matrix_inf_norm(std::experimental::linalg::impl::default_exec_t(), A, init);
+  return matrix_inf_norm(impl::default_exec_t{}, A, init);
 }
 
 namespace matrix_inf_norm_detail {
@@ -170,7 +144,7 @@ namespace matrix_inf_norm_detail {
     class Layout,
     class Accessor>
   auto matrix_inf_norm_return_type_deducer(
-    std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, numRows, numCols>, Layout, Accessor> A) -> decltype(abs(A(0,0)));
+    mdspan<ElementType, extents<SizeType, numRows, numCols>, Layout, Accessor> A) -> decltype(abs(A(0,0)));
 
 } // namespace matrix_inf_norm_detail
 
@@ -182,7 +156,7 @@ template<
   class Layout,
   class Accessor>
 auto matrix_inf_norm(
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, numRows, numCols>, Layout, Accessor> A)
+  mdspan<ElementType, extents<SizeType, numRows, numCols>, Layout, Accessor> A)
 -> decltype(matrix_inf_norm_detail::matrix_inf_norm_return_type_deducer(A))
 {
   using return_t = decltype(matrix_inf_norm_detail::matrix_inf_norm_return_type_deducer(A));
@@ -198,7 +172,7 @@ template<class ExecutionPolicy,
          class Accessor>
 auto matrix_inf_norm(
   ExecutionPolicy&& exec,
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, numRows, numCols>, Layout, Accessor> A)
+  mdspan<ElementType, extents<SizeType, numRows, numCols>, Layout, Accessor> A)
 -> decltype(matrix_inf_norm_detail::matrix_inf_norm_return_type_deducer(A))
 {
   using return_t = decltype(matrix_inf_norm_detail::matrix_inf_norm_return_type_deducer(A));
@@ -207,7 +181,7 @@ auto matrix_inf_norm(
 
 } // end namespace linalg
 } // end inline namespace __p1673_version_0
-} // end namespace experimental
-} // end namespace std
+} // end namespace MDSPAN_IMPL_PROPOSED_NAMESPACE
+} // end namespace MDSPAN_IMPL_STANDARD_NAMESPACE
 
 #endif //LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_BLAS1_MATRIX_INF_NORM_HPP_

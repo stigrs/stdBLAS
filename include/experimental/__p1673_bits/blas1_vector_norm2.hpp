@@ -1,44 +1,19 @@
-/*
 //@HEADER
 // ************************************************************************
 //
-//                        Kokkos v. 2.0
-//              Copyright (2019) Sandia Corporation
+//                        Kokkos v. 4.0
+//       Copyright (2022) National Technology & Engineering
+//               Solutions of Sandia, LLC (NTESS).
 //
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-// the U.S. Government retains certain rights in this software. //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
 //
-// 1. Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the Corporation nor the names of the
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Questions? Contact Christian R. Trott (crtrott@sandia.gov)
+// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
+// See https://kokkos.org/LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // ************************************************************************
 //@HEADER
-*/
 
 #ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_BLAS1_VECTOR_NORM2_HPP_
 #define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_BLAS1_VECTOR_NORM2_HPP_
@@ -47,29 +22,29 @@
 #include <cmath>
 #include <cstdlib>
 
-namespace std {
-namespace experimental {
+namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
+namespace MDSPAN_IMPL_PROPOSED_NAMESPACE {
 inline namespace __p1673_version_0 {
 namespace linalg {
 
 namespace
 {
 template <class Exec, class x_t, class Scalar, class = void>
-struct is_custom_vector_norm2_avail : std::false_type {};
+struct is_custom_vector_two_norm_avail : std::false_type {};
 
 template <class Exec, class x_t, class Scalar>
-struct is_custom_vector_norm2_avail<
+struct is_custom_vector_two_norm_avail<
   Exec, x_t, Scalar,
   std::enable_if_t<
     std::is_same<
       decltype(
-	       vector_norm2(std::declval<Exec>(),
+	       vector_two_norm(std::declval<Exec>(),
 			    std::declval<x_t>(),
 			    std::declval<Scalar>())
 	       ),
       Scalar
       >::value
-    && !linalg::impl::is_inline_exec_v<Exec>
+    && ! impl::is_inline_exec_v<Exec>
     >
   >
   : std::true_type{};
@@ -80,9 +55,9 @@ template<class ElementType,
          class Layout,
          class Accessor,
          class Scalar>
-Scalar vector_norm2(
-  std::experimental::linalg::impl::inline_exec_t&& exec,
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> x,
+Scalar vector_two_norm(
+  impl::inline_exec_t&& exec,
+  mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> x,
   Scalar init)
 {
   // Initialize the sum of squares result
@@ -105,21 +80,20 @@ template<class ExecutionPolicy,
          class Layout,
          class Accessor,
          class Scalar>
-Scalar vector_norm2(
+Scalar vector_two_norm(
   ExecutionPolicy&& exec,
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> x,
+  mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> x,
   Scalar init)
 {
-  constexpr bool use_custom = is_custom_vector_norm2_avail<
-    decltype(execpolicy_mapper(exec)), decltype(x), Scalar
+  constexpr bool use_custom = is_custom_vector_two_norm_avail<
+    decltype(impl::map_execpolicy_with_check(exec)), decltype(x), Scalar
     >::value;
 
-  if constexpr(use_custom){
-    return vector_norm2(execpolicy_mapper(exec), x, init);
+  if constexpr (use_custom) {
+    return vector_two_norm(impl::map_execpolicy_with_check(exec), x, init);
   }
-  else
-  {
-    return vector_norm2(std::experimental::linalg::impl::inline_exec_t(), x, init);
+  else {
+    return vector_two_norm(impl::inline_exec_t{}, x, init);
   }
 }
 
@@ -128,15 +102,15 @@ template<class ElementType,
          class Layout,
          class Accessor,
          class Scalar>
-Scalar vector_norm2(
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> x,
+Scalar vector_two_norm(
+  mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> x,
   Scalar init)
 {
-  return vector_norm2(std::experimental::linalg::impl::default_exec_t(), x, init);
+  return vector_two_norm(impl::default_exec_t{}, x, init);
 }
 
 
-namespace vector_norm2_detail {
+namespace vector_two_norm_detail {
   using std::abs;
 
   // The point of this is to do correct ADL for abs,
@@ -146,21 +120,21 @@ namespace vector_norm2_detail {
     class SizeType, ::std::size_t ext0,
     class Layout,
     class Accessor>
-  auto vector_norm2_return_type_deducer(
-    std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> x)
+  auto vector_two_norm_return_type_deducer(
+    mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> x)
   -> decltype(abs(x(0)) * abs(x(0)));
-} // namespace vector_norm2_detail
+} // namespace vector_two_norm_detail
 
 template<class ElementType,
          class SizeType, ::std::size_t ext0,
          class Layout,
          class Accessor>
-auto vector_norm2(
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> x)
--> decltype(vector_norm2_detail::vector_norm2_return_type_deducer(x))
+auto vector_two_norm(
+  mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> x)
+-> decltype(vector_two_norm_detail::vector_two_norm_return_type_deducer(x))
 {
-  using return_t = decltype(vector_norm2_detail::vector_norm2_return_type_deducer(x));
-  return vector_norm2(x, return_t{});
+  using return_t = decltype(vector_two_norm_detail::vector_two_norm_return_type_deducer(x));
+  return vector_two_norm(x, return_t{});
 }
 
 template<class ExecutionPolicy,
@@ -168,18 +142,18 @@ template<class ExecutionPolicy,
          class SizeType, ::std::size_t ext0,
          class Layout,
          class Accessor>
-auto vector_norm2(
+auto vector_two_norm(
   ExecutionPolicy&& exec,
-  std::experimental::mdspan<ElementType, std::experimental::extents<SizeType, ext0>, Layout, Accessor> x)
--> decltype(vector_norm2_detail::vector_norm2_return_type_deducer(x))
+  mdspan<ElementType, extents<SizeType, ext0>, Layout, Accessor> x)
+-> decltype(vector_two_norm_detail::vector_two_norm_return_type_deducer(x))
 {
-  using return_t = decltype(vector_norm2_detail::vector_norm2_return_type_deducer(x));
-  return vector_norm2(exec, x, return_t{});
+  using return_t = decltype(vector_two_norm_detail::vector_two_norm_return_type_deducer(x));
+  return vector_two_norm(exec, x, return_t{});
 }
 
 } // end namespace linalg
 } // end inline namespace __p1673_version_0
-} // end namespace experimental
-} // end namespace std
+} // end namespace MDSPAN_IMPL_PROPOSED_NAMESPACE
+} // end namespace MDSPAN_IMPL_STANDARD_NAMESPACE
 
 #endif //LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_BLAS1_VECTOR_NORM2_HPP_

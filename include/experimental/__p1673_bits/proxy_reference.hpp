@@ -1,49 +1,23 @@
-/*
 //@HEADER
 // ************************************************************************
 //
-//                        Kokkos v. 2.0
-//              Copyright (2019) Sandia Corporation
+//                        Kokkos v. 4.0
+//       Copyright (2022) National Technology & Engineering
+//               Solutions of Sandia, LLC (NTESS).
 //
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-// the U.S. Government retains certain rights in this software. //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
 //
-// 1. Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the Corporation nor the names of the
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Questions? Contact Christian R. Trott (crtrott@sandia.gov)
+// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
+// See https://kokkos.org/LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // ************************************************************************
 //@HEADER
-*/
 
 #ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_PROXY_REFERENCE_HPP_
 #define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_PROXY_REFERENCE_HPP_
 
-#include "conjugate_if_needed.hpp"
 #if defined(__cpp_lib_atomic_ref) && defined(LINALG_ENABLE_ATOMIC_REF)
 #  include <atomic>
 #endif
@@ -53,8 +27,8 @@
 #include <cstdint>
 #include <type_traits>
 
-namespace std {
-namespace experimental {
+namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
+namespace MDSPAN_IMPL_PROPOSED_NAMESPACE {
 inline namespace __p1673_version_0 {
 namespace linalg {
 namespace impl {
@@ -66,72 +40,6 @@ static constexpr bool is_atomic_ref_not_arithmetic_v = false;
 template<class U>
 static constexpr bool is_atomic_ref_not_arithmetic_v<std::atomic_ref<U>> = ! std::is_arithmetic_v<U>;
 #endif
-
-template<class T, class = void>
-struct has_imag : std::false_type {};
-
-// If I can find unqualified imag via overload resolution,
-// then assume that imag(t) returns the imaginary part of t.
-template<class T>
-struct has_imag<T, decltype(imag(std::declval<T>()), void())> : std::true_type {};
-
-template<class T>
-T imag_part_impl(const T& t, std::false_type)
-{
-  return T{};
-}
-
-template<class T>
-auto imag_part_impl(const T& t, std::true_type)
-{
-  if constexpr (std::is_arithmetic_v<T>) {
-    return T{};
-  } else {
-    return imag(t);
-  }
-}
-
-template<class T>
-auto imag_part(const T& t)
-{
-  return imag_part_impl(t, has_imag<T>{});
-}
-
-template<class T, class = void>
-struct has_real : std::false_type {};
-
-// If I can find unqualified real via overload resolution,
-// then assume that real(t) returns the real part of t.
-template<class T>
-struct has_real<T, decltype(real(std::declval<T>()), void())> : std::true_type {};
-
-template<class T>
-T real_part_impl(const T& t, std::false_type)
-{
-  return t;
-}
-
-template<class T>
-auto real_part_impl(const T& t, std::true_type)
-{
-  if constexpr (std::is_arithmetic_v<T>) {
-    return t;
-  } else {
-    return real(t);
-  }
-}
-
-template<class T>
-auto real_part(const T& t)
-{
-  return real_part_impl(t, has_real<T>{});
-}
-
-// template<class R>
-// R imag_part(const std::complex<R>& z)
-// {
-//   return std::imag(z);
-// }
 
 // A "tag" for identifying the proxy reference types in this proposal.
 // It's helpful for this tag to be a complete type, so that we can use
@@ -240,11 +148,11 @@ public:
   }
 
   friend auto real(const derived_type& x) {
-    return real_part(value_type(static_cast<const this_type&>(x)));
+    return impl::real_if_needed(value_type(static_cast<const this_type&>(x)));
   }
   
   friend auto imag(const derived_type& x) {
-    return imag_part(value_type(static_cast<const this_type&>(x)));
+    return impl::imag_if_needed(value_type(static_cast<const this_type&>(x)));
   }
 
   friend auto conj(const derived_type& x) {
@@ -324,7 +232,7 @@ public:
 
 } // end namespace linalg
 } // end inline namespace __p1673_version_0
-} // end namespace experimental
-} // end namespace std
+} // end namespace MDSPAN_IMPL_PROPOSED_NAMESPACE
+} // end namespace MDSPAN_IMPL_STANDARD_NAMESPACE
 
 #endif //LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_PROXY_REFERENCE_HPP_

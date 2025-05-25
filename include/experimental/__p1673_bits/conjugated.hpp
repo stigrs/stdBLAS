@@ -1,164 +1,121 @@
-/*
 //@HEADER
 // ************************************************************************
 //
-//                        Kokkos v. 2.0
-//              Copyright (2019) Sandia Corporation
+//                        Kokkos v. 4.0
+//       Copyright (2022) National Technology & Engineering
+//               Solutions of Sandia, LLC (NTESS).
 //
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-// the U.S. Government retains certain rights in this software. //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
 //
-// 1. Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the Corporation nor the names of the
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Questions? Contact Christian R. Trott (crtrott@sandia.gov)
+// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
+// See https://kokkos.org/LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // ************************************************************************
 //@HEADER
-*/
 
 #ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_CONJUGATED_HPP_
 #define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_CONJUGATED_HPP_
 
-#include <experimental/mdspan>
+#include <mdspan/mdspan.hpp>
 
-namespace std {
-namespace experimental {
+namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
+namespace MDSPAN_IMPL_PROPOSED_NAMESPACE {
 inline namespace __p1673_version_0 {
 namespace linalg {
 
-template<class Accessor>
-class accessor_conjugate;
-
-namespace impl {
-  template<
-    class Accessor,
-    bool is_arith =
-      std::is_arithmetic_v<
-        std::remove_cv_t<typename Accessor::element_type>
-    >
-  >
-  struct accessor_conjugate_aliases {};
-
-  template<class Accessor>
-  struct accessor_conjugate_aliases<Accessor, true>
-  {
-    using reference = typename Accessor::reference;
-    using element_type =
-      std::add_const_t<typename Accessor::element_type>;
-    using data_handle_type = typename Accessor::data_handle_type;
-    using offset_policy = typename Accessor::offset_policy;
-  };
-
-  template<class Accessor>
-  struct accessor_conjugate_aliases<Accessor, false>
-  {
-  private:
-    using accessor_value_type =
-      std::remove_cv_t<typename Accessor::element_type>;
-  public:
-     using reference =
-       conjugated_scalar<typename Accessor::reference,
-			 accessor_value_type>;
-    using element_type =
-      std::add_const_t<typename reference::value_type>;
-    using data_handle_type = typename Accessor::data_handle_type;
-    using offset_policy =
-      accessor_conjugate<typename Accessor::offset_policy>;
-  };
-
-} // namespace impl
-
-template<class Accessor>
-class accessor_conjugate {
+template<class NestedAccessor>
+class conjugated_accessor {
 private:
-  Accessor accessor_;
-  using aliases = impl::accessor_conjugate_aliases<Accessor>;
-
+  using nested_element_type = typename NestedAccessor::element_type;
+  using nc_result_type = decltype(impl::conj_if_needed(std::declval<nested_element_type>()));
 public:
-  using reference        = typename aliases::reference;
-  using element_type     = typename aliases::element_type;
-  using data_handle_type = typename aliases::data_handle_type;
-  using offset_policy    = typename aliases::offset_policy;
+  using element_type = std::add_const_t<nc_result_type>;
+  using reference = std::remove_const_t<element_type>;
+  using data_handle_type = typename NestedAccessor::data_handle_type;
+  using offset_policy =
+    conjugated_accessor<typename NestedAccessor::offset_policy>;
 
-  accessor_conjugate(Accessor accessor) : accessor_(accessor) {}
+  constexpr conjugated_accessor() = default;
+  constexpr conjugated_accessor(const NestedAccessor& acc) : nested_accessor_(acc) {}
 
   MDSPAN_TEMPLATE_REQUIRES(
-    class OtherElementType,
-    /* requires */ (std::is_convertible_v<
-      typename default_accessor<OtherElementType>::element_type(*)[],
-      typename Accessor::element_type(*)[]
-    >)
+    class OtherNestedAccessor,
+    /* requires */ (std::is_convertible_v<NestedAccessor, const OtherNestedAccessor&>)
   )
-  accessor_conjugate(default_accessor<OtherElementType> accessor) : accessor_(accessor) {}
+#if defined(__cpp_conditional_explicit)
+  explicit(!std::is_convertible_v<OtherNestedAccessor, NestedAccessor>)
+#endif
+  constexpr conjugated_accessor(const conjugated_accessor<OtherNestedAccessor>& other)
+    : nested_accessor_(other.nested_accessor())
+  {}
 
-  reference access(data_handle_type p, ::std::size_t i) const
-    noexcept(noexcept(reference(accessor_.access(p, i))))
+  constexpr reference
+    access(data_handle_type p, ::std::size_t i) const noexcept
   {
-    return reference(accessor_.access(p, i));
+    return impl::conj_if_needed(nested_element_type(nested_accessor_.access(p, i)));
   }
 
-  typename offset_policy::data_handle_type offset(data_handle_type p, ::std::size_t i) const
-    noexcept(noexcept(accessor_.offset(p, i)))
+  constexpr typename offset_policy::data_handle_type
+    offset(data_handle_type p, ::std::size_t i) const noexcept
   {
-    return accessor_.offset(p, i);
+    return nested_accessor_.offset(p, i);
   }
 
-  Accessor nested_accessor() const { return accessor_; }
+  const NestedAccessor& nested_accessor() const noexcept { return nested_accessor_; }
+
+private:
+  NestedAccessor nested_accessor_;
 };
 
 template<class ElementType, class Extents, class Layout, class Accessor>
 auto conjugated(mdspan<ElementType, Extents, Layout, Accessor> a)
 {
-  if constexpr (std::is_arithmetic_v<std::remove_cv_t<ElementType>>) {
+  using value_type = typename decltype(a)::value_type;
+
+  // Current status of [linalg] only optimizes if Accessor is
+  // conjugated_accessor<Accessor> for some Accessor.
+  // There's a separate specialization for that case below.
+
+#if defined(LINALG_FIX_CONJUGATED_FOR_NONCOMPLEX)
+  // P3050 optimizes conjugated's accessor type for when
+  // we know that it can't be complex: arithmetic types,
+  // and types for which `conj` is not ADL-findable.
+  if constexpr (std::is_arithmetic_v<value_type>) {
     return mdspan<ElementType, Extents, Layout, Accessor>
       (a.data_handle(), a.mapping(), a.accessor());
-  } else {
-    using return_element_type =
-      typename accessor_conjugate<Accessor>::element_type;
-    using return_accessor_type = accessor_conjugate<Accessor>;
-    return mdspan<return_element_type, Extents, Layout, return_accessor_type>
-      (a.data_handle(), a.mapping(), return_accessor_type(a.accessor()));
   }
+  else if constexpr (! impl::has_conj<value_type>::value) {
+    return mdspan<ElementType, Extents, Layout, Accessor>
+      (a.data_handle(), a.mapping(), a.accessor());
+  }
+  else {
+#endif // LINALG_FIX_CONJUGATED_FOR_NONCOMPLEX
+  using return_element_type =
+    typename conjugated_accessor<Accessor>::element_type;
+  using return_accessor_type = conjugated_accessor<Accessor>;
+  return mdspan<return_element_type, Extents, Layout, return_accessor_type>
+    (a.data_handle(), a.mapping(), return_accessor_type(a.accessor()));
+#if defined(LINALG_FIX_CONJUGATED_FOR_NONCOMPLEX)
+  }
+#endif // LINALG_FIX_CONJUGATED_FOR_NONCOMPLEX
 }
 
 // Conjugation is self-annihilating
 template<class ElementType, class Extents, class Layout, class NestedAccessor>
 auto conjugated(
-  mdspan<ElementType, Extents, Layout, accessor_conjugate<NestedAccessor>> a)
+  mdspan<ElementType, Extents, Layout, conjugated_accessor<NestedAccessor>> a)
 {
   using return_element_type = typename NestedAccessor::element_type;
   using return_accessor_type = NestedAccessor;
   return mdspan<return_element_type, Extents, Layout, return_accessor_type>
-    (a.data_handle(), a.mapping(), a.nested_accessor());
+    (a.data_handle(), a.mapping(), a.accessor().nested_accessor());
 }
 
 } // end namespace linalg
 } // end inline namespace __p1673_version_0
-} // end namespace experimental
-} // end namespace std
+} // end namespace MDSPAN_IMPL_PROPOSED_NAMESPACE
+} // end namespace MDSPAN_IMPL_STANDARD_NAMESPACE
 
 #endif //LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_CONJUGATED_HPP_
