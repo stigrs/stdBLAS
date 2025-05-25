@@ -20,6 +20,8 @@
 
 #include <type_traits>
 
+namespace LinearAlgebra = MDSPAN_IMPL_STANDARD_NAMESPACE::MDSPAN_IMPL_PROPOSED_NAMESPACE::linalg;
+
 namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
 namespace MDSPAN_IMPL_PROPOSED_NAMESPACE {
 inline namespace __p1673_version_0 {
@@ -258,7 +260,7 @@ void triangular_matrix_vector_solve(
   mdspan<ElementType_X, extents<SizeType_X, ext_X>, Layout_X, Accessor_X> x)
 {
   auto divide = [](const auto& xi, const auto& yi) { return xi / yi; };
-  triangular_matrix_vector_solve(std::forward<std::experimental::linalg::impl::inline_exec_t>(exec), A, t, d, b, x, divide);
+  triangular_matrix_vector_solve(std::forward<LinearAlgebra::impl::inline_exec_t>(exec), A, t, d, b, x, divide);
 }
 
 // Overloads taking an ExecutionPolicy
