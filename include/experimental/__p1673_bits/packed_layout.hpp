@@ -18,7 +18,7 @@
 #ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_PACKED_LAYOUT_HPP_
 #define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_PACKED_LAYOUT_HPP_
 
-#include <mdspan/mdspan.hpp>
+#include <experimental/mdspan>
 #include "layout_triangle.hpp"
 
 namespace MDSPAN_IMPL_STANDARD_NAMESPACE {

@@ -21,7 +21,7 @@
 // This must be defined before including any mdspan headers.
 #define MDSPAN_USE_PAREN_OPERATOR 1
 
-#include <mdspan/mdspan.hpp>
+#include <experimental/mdspan>
 #include <experimental/linalg>
 #include <vector>
 #include <iostream>
