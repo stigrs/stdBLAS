@@ -72,7 +72,7 @@ private:
 template<class ElementType, class Extents, class Layout, class Accessor>
 auto conjugated(mdspan<ElementType, Extents, Layout, Accessor> a)
 {
-  using value_type = typename decltype(a)::value_type;
+  //using value_type = typename decltype(a)::value_type;
 
   // Current status of [linalg] only optimizes if Accessor is
   // conjugated_accessor<Accessor> for some Accessor.
