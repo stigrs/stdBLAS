@@ -18,7 +18,7 @@
 #ifndef LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_MACROS_HPP_
 #define LINALG_INCLUDE_EXPERIMENTAL___P1673_BITS_MACROS_HPP_
 
-#include "__p1673_bits/linalg_config.h"
+//#include "__p1673_bits/linalg_config.h" /* bug fix */
 
 // Work around a known MSVC issue, that by default
 // it always defines __cplusplus as for C++98,

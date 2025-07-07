@@ -1,0 +1,20 @@
+# Files:
+*~
+*.x
+*.exe
+*.o
+*.d
+*.dat
+*.out
+*.log
+*.tmp
+*.swp
+*.pdb
+.DS_Store
+tmp.*
+
+# Directories:
+build
+tmp
+.vs
+.vscode

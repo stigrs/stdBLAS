@@ -11,8 +11,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 ################################################################################
 
-option(LINALG_ENABLE_TESTS "Enable tests." Off)
-option(LINALG_ENABLE_EXAMPLES "Build examples." Off)
+option(LINALG_ENABLE_TESTS "Enable tests." ON)
+option(LINALG_ENABLE_EXAMPLES "Build examples." ON)
 #option(LINALG_ENABLE_BENCHMARKS "Enable benchmarks." Off)
 #option(LINALG_ENABLE_COMP_BENCH "Enable compilation benchmarks." Off)
 
@@ -198,15 +198,15 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/experimental/__p1673_bits/lina
 )
 
 include(CMakePackageConfigHelpers)
-configure_package_config_file(cmake/LinAlgConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfig.cmake
+configure_package_config_file(cmake/linalgConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/linalgConfig.cmake
   INSTALL_DESTINATION cmake
 )
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfigVersion.cmake
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/linalgConfigVersion.cmake
   COMPATIBILITY SameMajorVersion
 )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/LinAlgConfigVersion.cmake
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/linalgConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/linalgConfigVersion.cmake
     DESTINATION cmake
 )
 
